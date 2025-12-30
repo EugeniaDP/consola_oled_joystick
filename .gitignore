@@ -1,0 +1,8 @@
+# Arduino
+*.hex
+*.elf
+*.bin
+
+# VS Code / Arduino IDE
+.vscode/
+.build/
