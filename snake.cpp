@@ -1,9 +1,12 @@
 #include "snake.h"
+#include <Arduino.h>
+#include <Adafruit_SSD1306.h>
 
 // ===== REFERENCIAS COMPARTIDAS =====
 extern Adafruit_SSD1306 display;
 extern int joystickXPin;
 extern int joystickYPin;
+extern int pausePin;   // Pin del switch para pausa
 
 // ===== CONFIG =====
 static const int cellSize   = 4;
@@ -21,106 +24,146 @@ static bool snakeOver;
 static unsigned long lastMove;
 static const unsigned long snakeSpeed = 200;
 
+// ===== PAUSA =====
+static bool paused = false;
+static bool pauseLastState = HIGH;
+
 // --------------------------------
 static void spawnFood() {
-  foodX = random(gridWidth);
-  foodY = random(gridHeight);
+    foodX = random(gridWidth);
+    foodY = random(gridHeight);
 }
 
 // --------------------------------
 void snakeGameInit() {
-  snakeX = 8;
-  snakeY = 16;
-  snakeSize = 1;
-  direction = ' ';
-  snakeOver = false;
-  lastMove = millis();
-  spawnFood();
+    snakeX = 8;
+    snakeY = 16;
+    snakeSize = 1;
+    direction = ' ';
+    snakeOver = false;
+    lastMove = millis();
+    spawnFood();
 
-  display.clearDisplay();
-  display.display();
+    // Inicializar cola para evitar falsa colisión
+    for (int i = 0; i < 100; i++) {
+        tailX[i] = snakeX;
+        tailY[i] = snakeY;
+    }
+
+    paused = false;
+    pauseLastState = HIGH;   // inicializamos igual que Arkanoid
+
+    display.clearDisplay();
+    display.display();
 }
 
 // --------------------------------
 static void readJoystick() {
-  int x = analogRead(joystickXPin);
-  int y = analogRead(joystickYPin);
+    int x = analogRead(joystickXPin);
+    int y = analogRead(joystickYPin);
 
-  // EJE Y NORMAL (arriba = subir)
-  if (y < 200) direction = 'u';
-  else if (y > 800) direction = 'd';
-
-  // EJE X NORMAL
-  else if (x < 200) direction = 'l';
-  else if (x > 800) direction = 'r';
+    // EJE Y NORMAL (arriba = subir)
+    if (y < 200) direction = 'u';
+    else if (y > 800) direction = 'd';
+    // EJE X NORMAL
+    else if (x < 200) direction = 'l';
+    else if (x > 800) direction = 'r';
 }
 
 // --------------------------------
 static void moveSnake() {
-  for (int i = snakeSize - 1; i > 0; i--) {
-    tailX[i] = tailX[i - 1];
-    tailY[i] = tailY[i - 1];
-  }
+    // Mover cola
+    for (int i = snakeSize - 1; i > 0; i--) {
+        tailX[i] = tailX[i - 1];
+        tailY[i] = tailY[i - 1];
+    }
+    tailX[0] = snakeX;
+    tailY[0] = snakeY;
 
-  tailX[0] = snakeX;
-  tailY[0] = snakeY;
+    // Actualizar cabeza
+    if (direction == 'l') snakeX--;
+    if (direction == 'r') snakeX++;
+    if (direction == 'u') snakeY--;
+    if (direction == 'd') snakeY++;
 
-  if (direction == 'l') snakeX--;
-  if (direction == 'r') snakeX++;
-  if (direction == 'u') snakeY--;
-  if (direction == 'd') snakeY++;
+    // Colisión con bordes
+    if (snakeX < 0 || snakeX >= gridWidth || snakeY < 0 || snakeY >= gridHeight) {
+        snakeOver = true;
+        return;
+    }
 
-  if (snakeX < 0) snakeX = gridWidth - 1;
-  if (snakeX >= gridWidth) snakeX = 0;
-  if (snakeY < 0) snakeY = gridHeight - 1;
-  if (snakeY >= gridHeight) snakeY = 0;
+    // Colisión con la propia serpiente (se inicia en 1 porque, si se inicia en 0, la condición es verdadera al iniciar el juego)
+    for (int i = 1; i < snakeSize; i++) {
+        if (snakeX == tailX[i] && snakeY == tailY[i]) {
+            snakeOver = true;
+            return;
+        }
+    }
 
-  if (snakeX == foodX && snakeY == foodY) {
-    snakeSize++;
-    spawnFood();
-    if (snakeSize > 20) snakeOver = true;
-  }
+    // Comer comida
+    if (snakeX == foodX && snakeY == foodY) {
+        snakeSize++;
+        spawnFood();
+        if (snakeSize > 100) snakeOver = true; // límite máximo de tamaño
+    }
 }
 
 // --------------------------------
 static void drawSnake() {
-  display.clearDisplay();
+    display.clearDisplay();
 
-  display.fillRect(
-    foodX * cellSize,
-    foodY * cellSize,
-    cellSize,
-    cellSize,
-    SSD1306_WHITE
-  );
-
-  for (int i = 0; i < snakeSize; i++) {
+    // Dibujar comida
     display.fillRect(
-      tailX[i] * cellSize,
-      tailY[i] * cellSize,
-      cellSize,
-      cellSize,
-      SSD1306_WHITE
+        foodX * cellSize,
+        foodY * cellSize,
+        cellSize,
+        cellSize,
+        SSD1306_WHITE
     );
-  }
 
-  display.display();
+    // Dibujar serpiente
+    for (int i = 0; i < snakeSize; i++) {
+        display.fillRect(
+            tailX[i] * cellSize,
+            tailY[i] * cellSize,
+            cellSize,
+            cellSize,
+            SSD1306_WHITE
+        );
+    }
+
+    display.display();
+}
+
+// --------------------------------
+static void checkPause() {
+    bool pauseNow = digitalRead(pausePin);
+
+    if (pauseLastState == HIGH && pauseNow == LOW) {
+        paused = !paused;
+    }
+
+    pauseLastState = pauseNow;
 }
 
 // --------------------------------
 void snakeGameUpdate() {
-  if (snakeOver) return;
+    if (snakeOver) return;
 
-  readJoystick();
+    checkPause();  // revisar pausa
 
-  if (millis() - lastMove > snakeSpeed) {
-    lastMove = millis();
-    moveSnake();
-    drawSnake();
-  }
+    if (!paused) {
+        readJoystick();
+
+        if (millis() - lastMove > snakeSpeed) {
+            lastMove = millis();
+            moveSnake();
+            drawSnake();
+        }
+    }
 }
 
 // --------------------------------
 bool snakeGameFinished() {
-  return snakeOver;
+    return snakeOver;
 }

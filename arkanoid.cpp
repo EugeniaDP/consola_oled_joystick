@@ -37,6 +37,10 @@ static bool win;
 static bool paused;
 static bool pauseLastState;
 
+// para detectar movimiento de la paleta
+static int lastPaddleX;
+
+
 // ---------------------------------------
 static void resetBall() {
   ballX = paddleX + paddleWidth / 2;
@@ -140,6 +144,8 @@ static void drawGame() {
 // =======================================
 void arkanoidGameInit() {
   paddleX = SCREEN_WIDTH / 2 - paddleWidth / 2;
+  lastPaddleX = paddleX;
+
   lives = 3;
   gameOver = false;
   win = false;
@@ -167,9 +173,11 @@ void arkanoidGameUpdate() {
 
   readPaddle();
 
-  if (!ballLaunched && pauseNow == LOW) {
+  if (!ballLaunched && paddleX != lastPaddleX) {
     ballLaunched = true;
   }
+
+  lastPaddleX = paddleX;
 
   updateBall();
   drawGame();

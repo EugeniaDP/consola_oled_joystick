@@ -69,15 +69,20 @@ void updateMenu() {
   }
 
   if (swLast == HIGH && swNow == LOW) {
-    currentState = STATE_GAME;
+      // Esperar a que suelte el switch antes de iniciar el juego
+      while(digitalRead(joystickSW) == LOW) {
+        delay(10); // espera corta, no bloquea demasiado
+      }
 
-    if (currentGame == GAME_SNAKE) {
-      snakeGameInit();
-    } else {
-      arkanoidGameInit();
-    }
+      swLast = HIGH; // <--- actualizar el estado anterior
 
-    delay(200);
+      currentState = STATE_GAME;
+
+      if (currentGame == GAME_SNAKE) {
+        snakeGameInit();
+      } else {
+        arkanoidGameInit();
+      }
   }
 
   swLast = swNow;
