@@ -7,8 +7,8 @@ extern int joystickYPin;
 
 // ===== CONFIG =====
 static const int cellSize   = 4;
-static const int gridWidth  = 32;
-static const int gridHeight = 16;
+static const int gridWidth  = 16;
+static const int gridHeight = 32;
 
 // ===== ESTADO =====
 static int snakeX, snakeY;
@@ -19,7 +19,7 @@ static int tailX[100], tailY[100];
 static bool snakeOver;
 
 static unsigned long lastMove;
-static const unsigned long snakeSpeed = 250;
+static const unsigned long snakeSpeed = 200;
 
 // --------------------------------
 static void spawnFood() {
@@ -29,8 +29,8 @@ static void spawnFood() {
 
 // --------------------------------
 void snakeGameInit() {
-  snakeX = 4;
-  snakeY = 4;
+  snakeX = 8;
+  snakeY = 16;
   snakeSize = 1;
   direction = ' ';
   snakeOver = false;

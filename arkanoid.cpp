@@ -9,13 +9,13 @@ extern const int joystickXPin;
 extern const int pausePin;
 
 // ======= CONSTANTES =======
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+#define SCREEN_WIDTH 64
+#define SCREEN_HEIGHT 128
 
 // ======= ESTADO DEL JUEGO =======
-static int paddleX;
-static const int paddleY = 56;
-static const int paddleWidth = 30;
+static int paddleX;                 // posici√≥n horizontal de la paleta
+static const int paddleY = SCREEN_HEIGHT - 12; // paleta fija vertical
+static const int paddleWidth = 20;
 static const int paddleHeight = 4;
 
 static int ballX, ballY;
@@ -23,9 +23,9 @@ static int ballVX, ballVY;
 static bool ballLaunched;
 
 static const int brickRows = 3;
-static const int brickCols = 8;
-static const int brickWidth = 14;
-static const int brickHeight = 6;
+static const int brickCols = 6;
+static const int brickWidth = 8;
+static const int brickHeight = 8;
 
 static bool bricks[brickRows][brickCols];
 
@@ -37,15 +37,12 @@ static bool win;
 static bool paused;
 static bool pauseLastState;
 
-// =======================================
-// FUNCIONES INTERNAS (NO visibles afuera)
-// =======================================
-
+// ---------------------------------------
 static void resetBall() {
   ballX = paddleX + paddleWidth / 2;
-  ballY = paddleY - 4;
-  ballVX = 1;
-  ballVY = -1;
+  ballY = paddleY - 2;
+  ballVX = 2;
+  ballVY = -2;
   ballLaunched = false;
 }
 
@@ -65,6 +62,7 @@ static void readPaddle() {
 static void updateBall() {
   if (!ballLaunched) {
     ballX = paddleX + paddleWidth / 2;
+    ballY = paddleY - 2;
     return;
   }
 
@@ -76,30 +74,30 @@ static void updateBall() {
   if (ballY <= 0) ballVY *= -1;
 
   // cae abajo
-  if (ballY > SCREEN_HEIGHT) {
+  if (ballY >= SCREEN_HEIGHT) {
     lives--;
     resetBall();
     if (lives <= 0) gameOver = true;
   }
 
-  // colisiÛn con paddle
+  // colisi√≥n con paleta
   if (ballY >= paddleY - 2 &&
       ballX >= paddleX &&
-      ballX <= paddleX + paddleWidth) {
+      ballX <= paddleX + paddleWidth &&
+      ballVY > 0) {
     ballVY *= -1;
   }
 
-  // colisiÛn con ladrillos
+  // colisi√≥n con ladrillos
   bool bricksLeft = false;
-
   for (int r = 0; r < brickRows; r++) {
     for (int c = 0; c < brickCols; c++) {
       if (!bricks[r][c]) continue;
 
       bricksLeft = true;
 
-      int bx = c * (brickWidth + 2) + 4;
-      int by = r * (brickHeight + 2) + 4;
+      int bx = c * (brickWidth + 2) + 2;
+      int by = r * (brickHeight + 2) + 2;
 
       if (ballX >= bx && ballX <= bx + brickWidth &&
           ballY >= by && ballY <= by + brickHeight) {
@@ -116,21 +114,20 @@ static void updateBall() {
 static void drawGame() {
   display.clearDisplay();
 
-  // paddle
+  // paleta
   display.fillRect(paddleX, paddleY,
                    paddleWidth, paddleHeight, SSD1306_WHITE);
 
-  // ball
+  // bola
   display.fillCircle(ballX, ballY, 2, SSD1306_WHITE);
 
-  // bricks
+  // ladrillos
   for (int r = 0; r < brickRows; r++) {
     for (int c = 0; c < brickCols; c++) {
       if (bricks[r][c]) {
-        int bx = c * (brickWidth + 2) + 4;
-        int by = r * (brickHeight + 2) + 4;
-        display.fillRect(bx, by,
-                         brickWidth, brickHeight, SSD1306_WHITE);
+        int bx = c * (brickWidth + 2) + 2;
+        int by = r * (brickHeight + 2) + 2;
+        display.fillRect(bx, by, brickWidth, brickHeight, SSD1306_WHITE);
       }
     }
   }
@@ -139,11 +136,10 @@ static void drawGame() {
 }
 
 // =======================================
-// INTERFAZ P⁄BLICA (la que usa el men˙)
+// INTERFAZ P√öBLICA
 // =======================================
-
 void arkanoidGameInit() {
-  paddleX = 49;
+  paddleX = SCREEN_WIDTH / 2 - paddleWidth / 2;
   lives = 3;
   gameOver = false;
   win = false;

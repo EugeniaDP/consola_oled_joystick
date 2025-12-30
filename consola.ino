@@ -40,13 +40,13 @@ void drawMenu() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
 
-  display.setCursor(10, 8);
-  display.print("MENU DE JUEGOS");
+  display.setCursor(10, 4);
+  display.print("MENU");
 
-  display.setCursor(20, 30);
+  display.setCursor(0, 20);
   display.print(currentGame == GAME_SNAKE ? "> Snake" : "  Snake");
 
-  display.setCursor(20, 42);
+  display.setCursor(0, 36);
   display.print(currentGame == GAME_ARKANOID ? "> Arkanoid" : "  Arkanoid");
 
   display.display();
@@ -90,6 +90,7 @@ void setup() {
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     while (true);
   }
+  display.setRotation(1); // rota 90° para vertical
 
   display.clearDisplay();
   display.display();
